@@ -1,8 +1,6 @@
 from cpymad.madx import Madx
 
-import xpart as xp
 import xtrack as xt
-import xobjects as xo
 
 import numpy as np
 from warnings import warn
