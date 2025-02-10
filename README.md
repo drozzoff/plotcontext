@@ -19,3 +19,5 @@ with plotcontext as ctx:
 
 ```
 Inside of the context one can plot any arbitrary data, and the survey and apertures will be plotted as well if requested.
+
+The style of the is defined in `"style.json"` file. The user can modify this file to change the style of the plot.
