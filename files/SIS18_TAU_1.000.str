@@ -1,0 +1,12 @@
+//
+//
+//Quadrupole strengths 'k1nl' for 
+//
+//          SIS18_TAU_1.000  Extraction
+//
+//
+k1nl_GS01QS1F :=  0.372247999536612 ; 
+k1nl_GS01QS2D :=  -0.3515360025176006 ; 
+k1nl_GS12QS3T :=  0.0315 ; 
+k1nl_GS12QS1F :=  0.372247999536612 ; 
+k1nl_GS12QS2D :=  -0.3515360025176006 ; 
