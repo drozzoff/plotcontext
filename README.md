@@ -2,6 +2,8 @@
 
 It provides a context manager to set the plotting for an accelerator related data.
 
+Atm only works in Jupyter in non interactive mode.
+
 Currently, one can add the apertures or survey of the lattice as a background to the plot.
 
 Example of use:
