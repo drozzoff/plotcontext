@@ -109,6 +109,13 @@ for name in sis18ring.element_dict:
 plotcontext = PlotContext(show_survey = True, show_apertures = True, line = sis18ring)
 
 with plotcontext as ctx:
-	ctx.add_plot(np.linspace(0, 100, 30), np.linspace(-0.020, 0.020, 30), '-o', label = "dummy", color = "green" )
+	ctx.add_plot(np.linspace(0, 100, 30), np.linspace(-0.020, 0.020, 30), '-o', label = "dummy", color = "green")
 
-	plt.savefig("test1.pdf")
+plotcontext.tk_root.mainloop()
+
+plotcontext.show_apertures = False
+
+with plotcontext as ctx:
+	ctx.add_plot(np.linspace(0, 100, 30), np.linspace(-0.020, 0.020, 30), '-o', label = "dummy", color = "green")
+
+plotcontext.canvas.draw()

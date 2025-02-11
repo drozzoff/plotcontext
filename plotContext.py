@@ -1,3 +1,5 @@
+import matplotlib
+import sys
 import matplotlib.pyplot as plt
 import xtrack as xt
 import json
@@ -5,10 +7,20 @@ from matplotlib.gridspec import GridSpec
 from matplotlib.patches import Rectangle
 import numpy as np
 from rich.console import Console
-from functools import wraps
-from typing import Callable
-from rich.errors import LiveError
+from IPython.display import display
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+def set_backend() -> str:
+	try:
+		if 'ipykernel' in sys.modules:
+			matplotlib.use("Agg")
+			return 'notebook'
+		else:
+			matplotlib.use("TkAgg")
+			return 'console'
+	except ImportError:
+		return None
 
 def get_thick_element_length(line: xt.Line, base_name: str) -> float:
 	# there are 2 types of elements we are looking
@@ -41,33 +53,6 @@ def get_orientation(element):
 			return None
 	return None
 
-def console_log(func: Callable):
-
-	def status_message(func_name):
-
-		if func_name in ["warm_survey"]:
-			return ["Bulding survey", "Survey built"]
-
-		if func_name in ["warm_apertures"]:
-			return ["Building apertures", "Apertures built"]
-		
-		return [f"Running '{func_name}'", ""]
-
-	@wraps(func)
-	def wrapper(self, *args, **kwargs):
-		progress, finished = status_message(func.__name__)
-
-		try:
-			with self.console.status(progress) as status:
-				res = func(self, *args, **kwargs)
-			self.console.log("[green]" + finished)
-		except LiveError:
-			res = func(self, *args, **kwargs)	
-		
-		return res
-
-	return wrapper
-
 class PlotContext:
 	"""
 	The class that holds the context of the plot with a precompiled background
@@ -91,7 +76,15 @@ class PlotContext:
 		line : xt.Line
 			The line object to plot the survey and apertures.
 		"""
+		self.env = set_backend()
+		plt.ion()
+
+		with open(style) as f:
+			self.config = json.load(f)
 		
+		self.fig = plt.figure(figsize = (self.config['Figure_size']['width'], self.config['Figure_size']['height']))
+		self.showed = False
+
 		self.console = Console()
 		self._show_survey, self._show_apertures = False, False
 
@@ -101,25 +94,23 @@ class PlotContext:
 		self.line = line
 		self.dynamic_figures = []
 
-		with open(style) as f:
-			self.config = json.load(f)
-
 		self.set_figure()
 
 		self.show_survey = show_survey
 		self.show_apertures = show_apertures
 
+		if self.env == 'console':
+			self.canvas = FigureCanvasTkAgg(self.fig)
+			self.tk_root = self.canvas.get_tk_widget().master
+			self.canvas.get_tk_widget().pack()
+
 
 	def set_figure(self):
-
-		# figure itself
 		figure_height = self.config['Figure_size']['height']
-		figure_width = self.config['Figure_size']['width']
-
-		self.fig = plt.figure(figsize = (figure_width, figure_height))
 		
-		#subplots
-		if self.show_survey:
+		self.fig.clf()
+
+		if self._show_survey:
 			self.gs = GridSpec(2, 1, height_ratios = [self.config['Survey']['Height'], figure_height - self.config['Survey']['Height']])
 			self.survey_subplot = self.fig.add_subplot(self.gs[0])
 			self.main_subplot = self.fig.add_subplot(self.gs[1], sharex = self.survey_subplot)
@@ -171,9 +162,7 @@ class PlotContext:
 			for artist in self.aperture_artists:
 				artist.set_visible(self._show_apertures)
 
-			self.fig.canvas.draw()	
-
-	@console_log
+#	@console_log
 	def warm_survey(self):
 		"""
 		Plot the survey and save it to use as a background later.
@@ -206,9 +195,7 @@ class PlotContext:
 
 		self.survey_subplot.set_yticks([])
 
-		self.fig.canvas.draw()
-
-	@console_log
+#	@console_log
 	def warm_apertures(self):
 		"""
 		Plot the aperture and save it to use as a background later.
@@ -292,8 +279,6 @@ class PlotContext:
 					self.main_subplot.add_patch(rectangle)
 					self.aperture_artists.append(rectangle)
 		
-		self.fig.canvas.draw()
-	
 	def add_plot(self, x, y, *args, **kwargs):
 		"""
 		Add a plot to the main subplot.
@@ -304,19 +289,21 @@ class PlotContext:
 
 	def __enter__(self):
 		"""Enter context: Restore the background and return the axis for plotting."""
-		self.fig.canvas.draw_idle()
-
-
 		for curve in self.dynamic_figures:
 			curve.remove()
 
 		self.dynamic_figures = []
-
+		self.fig.canvas.draw_idle()
 		return self
 
 	def __exit__(self, exc_type, exc_value, traceback):
 		"""Exit context: Update the plot efficiently."""
+		
+		if self.env == 'notebook':
+			canvas = FigureCanvas(plt.gcf())
+			canvas.draw()
+			display(plt.gcf())
 
-		self.fig.canvas.flush_events()
-		plt.draw()
-		plt.pause(0.001)
+		elif self.env == 'console':
+
+			self.canvas.draw()
